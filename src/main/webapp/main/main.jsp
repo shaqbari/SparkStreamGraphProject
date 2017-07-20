@@ -9,7 +9,7 @@
 <script src="http://code.jquery.com/jquery.js"></script>
 <script>
  $(function(){
-	setInterval("showGraph()", 2000); 
+	setInterval("showGraph()", 10000); 
  });
  
  function showGraph(){

@@ -1,24 +1,24 @@
-package com.sist.mongo;
+package com.sist.stream;
 
 import java.net.InetSocketAddress;
 
 import org.springframework.stereotype.Repository;
 
 import com.mongodb.*;
+
 import java.util.*;
 
-@Repository
-public class MusicRankDAO {
+public class IngrRankDAO {
 	private MongoClient mc;
 	private DB db;
 	private DBCollection dbc;
 	
-	public MusicRankDAO() {
+	public IngrRankDAO() {
 		try {
-			mc=new MongoClient(new ServerAddress(new InetSocketAddress("211.238.142.104", 27017)));
+			mc=new MongoClient(new ServerAddress(new InetSocketAddress("211.238.142.123", 27017)));
 			
 			db=mc.getDB("mydb");
-			dbc=db.getCollection("music");
+			dbc=db.getCollection("food");
 			
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -26,7 +26,7 @@ public class MusicRankDAO {
 		}
 	}
 	
-	public void musicInsert(MusicRankVO vo) {
+	public void musicInsert(IngrRankVO vo) {
 		try {
 			BasicDBObject where=new BasicDBObject();
 			where.put("name", vo.getName());
@@ -56,13 +56,13 @@ public class MusicRankDAO {
 		
 	}
 	
-	public List<MusicRankVO> musicAllData(){
-		List<MusicRankVO> list=new ArrayList<MusicRankVO>();
+	public List<IngrRankVO> musicAllData(){
+		List<IngrRankVO> list=new ArrayList<IngrRankVO>();
 		try {
 			DBCursor cursor=dbc.find().sort(new BasicDBObject("count", -1));
 			while (cursor.hasNext()) {
 				BasicDBObject obj=(BasicDBObject)cursor.next();
-				MusicRankVO vo=new MusicRankVO();
+				IngrRankVO vo=new IngrRankVO();
 				vo.setName(obj.getString("name"));
 				vo.setCount(obj.getInt("count"));
 				list.add(vo);

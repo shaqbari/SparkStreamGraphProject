@@ -92,3 +92,4 @@ hs_err_pid*
 src/main/java/com/sist/spark/MainClass2\.java
 
 src/main/java/com/sist/spark/DaumRank\.java
+/target/

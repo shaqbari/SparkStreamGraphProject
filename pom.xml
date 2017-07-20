@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.sist</groupId>
 	<artifactId>stream</artifactId>
-	<name>SpringSparkStreamMongoDBHadoopProject</name>
+	<name>projectBigDataRecipe</name>
 	<packaging>war</packaging>
 	<version>1.0.0-BUILD-SNAPSHOT</version>
 	<properties>
@@ -177,13 +177,13 @@
 		</dependency>
 		<!-- <dependency> <groupId>com.oracle</groupId> <artifactId>ojdbc14</artifactId> 
 			<version>10.2.0.4.0</version> </dependency> -->
-		<!-- <dependency>
+		<dependency>
 			<groupId>com.oracle</groupId>
 			<artifactId>ojdbc14</artifactId>
 			<version>10.2.0.4.0</version>
 			<scope>system</scope>
 			<systemPath>${project.basedir}/src/main/webapp/WEB-INF/lib/ojdbc14.jar</systemPath>
-		</dependency> -->
+		</dependency>
 		<!-- jar파일 등록 -->
 		<!-- <dependency>
 			<groupId>org.snu</groupId>

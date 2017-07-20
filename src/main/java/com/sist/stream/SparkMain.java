@@ -1,10 +1,16 @@
 package com.sist.stream;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
@@ -23,27 +29,29 @@ import org.apache.spark.streaming.twitter.TwitterUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.mongodb.BasicDBObject;
 import com.mongodb.DBCursor;
-import com.sist.mongo.MusicRankVO;
+import com.sist.dao.OracleIngrDAO;
 
 import scala.Tuple2;
 import twitter4j.Status;
 
-//@Component
 public class SparkMain {
 	// @Autowired
 	private Configuration hconf;// 하둡
 
 	private JobConf jobConf;// 하둡에 저장
 
+	private IngrRankDAO dao=new IngrRankDAO();//
 	/*
 	 * private SparkConf sconf; private JavaStreamingContext jsc;//참조변수를 이용하지
 	 * 못한다.
 	 */
 
+	
 	public static void main(String[] args) {
 		try {
 			// ApplicationContext app=new
@@ -53,7 +61,14 @@ public class SparkMain {
 			/*
 			 * SparkMain sm=new SparkMain(); sm.sparkInit(); sm.twitterStart();
 			 */
-
+			ApplicationContext app=
+					  new ClassPathXmlApplicationContext("app.xml");
+			
+			OracleIngrDAO oracleIngrDAO=(OracleIngrDAO) app.getBean("oracleIngrDAO");
+			List<IngrRankVO> ingrList=oracleIngrDAO.selectIngr();
+			System.out.println("레시피 갯수는 "+ingrList.size());
+			
+			
 			SparkMain sm = new SparkMain();
 			SparkConf sconf= new SparkConf().setAppName("Twitter-Real").setMaster("local[2]");
 			JavaStreamingContext jsc = new JavaStreamingContext(sconf, new Duration(10000));
@@ -72,7 +87,17 @@ public class SparkMain {
 			System.setProperty("twitter4j.oauth.accessToken", filter[2]);
 			System.setProperty("twitter4j.oauth.accessTokenSecret", filter[3]);
 
-			String[] data = { "헤이즈", "볼빨간사춘기", "지코", "아이유", "싸이", "레드벨벳", "마마무", "트와이스", "블랙핑크", "지드래곤" };
+			//String[] data = new String[ingrList.size()];
+			//int i=0;
+			/*for (IngrRankVO vo: ingrList) {
+				data[i]=vo.getName();
+				i++;
+			}*/
+			
+			//너무 많아서(800개이상) 다 검색을 못하네
+			
+			String[] data={"라면", "햄버거", "만두", "피자", "라면", "족발", "치킨", "아이스크림", "김밥", "탕수육"};
+			
 			JavaReceiverInputDStream<Status> twitterStream = TwitterUtils.createStream(jsc, data);
 			
 			// 우리는 Status중 String만 필요하다.
@@ -90,8 +115,8 @@ public class SparkMain {
 			final Matcher[] m=new Matcher[data.length];
 			
 			JavaDStream<String> words=status.flatMap(new FlatMapFunction<String, String>() {
-				List<String> list=new ArrayList<String>();
 				public Iterable<String> call(String s) throws Exception {
+					List<String> list=new ArrayList<String>();
 					for (int a = 0; a < m.length; a++) {
 						m[a]=p[a].matcher(s);
 						while (m[a].find()) {
@@ -168,7 +193,7 @@ public class SparkMain {
 		try {
 
 			// 몽고디비 전송
-			jps.saveAsHadoopFiles("hdfs://NameNode:9000/user/hadoop/music_ns1", "", Text.class, IntWritable.class, TextOutputFormat.class, jobConf );
+			jps.saveAsHadoopFiles("hdfs://NameNode:9000/user/hadoop/food_ns1", "", Text.class, IntWritable.class, TextOutputFormat.class, jobConf );
 
 		} catch (Exception e) {
 			System.out.println(e.getMessage());
@@ -177,6 +202,53 @@ public class SparkMain {
 
 	}
 	
+	/*@Scheduled(cron = "0 * * * * *") 
+	public void hadoopFileRead(){
+		System.out.println("몽고디비 갱신!!");
+		
+		try {
+			FileSystem fs=FileSystem.get(hconf);
+			FileStatus[] status=fs.listStatus(new Path("/user/hadoop/"));
+			for (FileStatus sss : status) {
+				
+				String temp=sss.getPath().getName();
+				if (!temp.startsWith("food_ns1")) {
+					continue; //위단어로 시작하지 않으면 넘어간다. 다른폴더가 생겨도 상관없어진다.
+				}
+				
+				FileStatus[] status2=fs.listStatus(new Path("/user/hadoop/"+sss.getPath().getName()));
+				for (FileStatus ss : status2) {
+					String name=ss.getPath().getName();
+					if (!name.equals("_SUCCESS")) {
+						FSDataInputStream is=fs.open(new Path("/user/hadoop/"+sss.getPath().getName()+"/"+ss.getPath().getName()));
+						BufferedReader br=new BufferedReader(new InputStreamReader(is));
+						while (true) {
+							String line=br.readLine();
+							if (line==null) {
+								break;
+							}
+							StringTokenizer st=new StringTokenizer(line);
+							IngrRankVO vo=new IngrRankVO();
+							vo.setName(st.nextToken().trim().replace("$", " "));
+							vo.setCount(Integer.parseInt(st.nextToken().trim()));
+							dao.musicInsert(vo);
+							
+							
+						}
+						br.close();
+					}
+				}
+				//읽고 다음에 읽을때 다시 읽지 않기 위해 읽은 폴더를 지운다.
+				fs.delete(new Path("/user/hadoop/"+sss.getPath().getName()), true);
+				
+				
+			}
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+	}*/
 	
 
 }

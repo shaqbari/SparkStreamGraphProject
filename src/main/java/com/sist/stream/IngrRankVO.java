@@ -1,9 +1,18 @@
-package com.sist.mongo;
+package com.sist.stream;
 
-public class MusicRankVO {
+public class IngrRankVO {
+	private int id;
 	private String name;
 	private int count;
 	
+	
+	
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
 	public String getName() {
 		return name;
 	}
